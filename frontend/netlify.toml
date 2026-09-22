@@ -1,0 +1,22 @@
+# Static export (see next.config.js `output: 'export'`) — Netlify serves the
+# `out/` folder as plain files, no Next.js server or Netlify's Next Runtime
+# plugin required.
+[build]
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NEXT_PUBLIC_API_URL = "https://trading-api-prod.railway.app"
+
+[context.deploy-preview.environment]
+  NEXT_PUBLIC_API_URL = "https://trading-api-prod.railway.app"
+
+# Optional convenience: lets the frontend call same-origin "/api/*" instead of
+# the Railway URL directly, if you'd rather avoid CORS entirely. Update the
+# target once the backend is deployed, and point NEXT_PUBLIC_API_URL at ""
+# (same origin) if you switch to this.
+[[redirects]]
+  from = "/api/*"
+  to = "https://trading-api-prod.railway.app/api/:splat"
+  status = 200
+  force = true

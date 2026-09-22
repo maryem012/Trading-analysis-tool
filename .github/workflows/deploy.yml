@@ -1,0 +1,58 @@
+# Deploys the frontend to Netlify on every push to main.
+#
+# NOTE: if you connect this repo to Netlify directly (New site → GitHub, per
+# the README), Netlify already builds and deploys on every push using
+# frontend/netlify.toml — this workflow would then be a second, competing
+# deploy. Use one or the other: Netlify's own Git integration is simpler for
+# most cases; keep this workflow instead if you specifically want deploys
+# gated on GitHub Actions (e.g. to run tests first) and disable Netlify's
+# auto-publishing from Git in that case.
+#
+# Required repo secrets:
+#   NETLIFY_AUTH_TOKEN   — https://app.netlify.com/user/applications
+#   NETLIFY_SITE_ID      — Site settings → General → Site details, on Netlify
+#   NEXT_PUBLIC_API_URL  — your deployed Railway API URL
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (static export to frontend/out)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: './frontend/out'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: 'Deploy ${{ github.sha }} via GitHub Actions'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

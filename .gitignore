@@ -1,0 +1,30 @@
+# Frontend (Next.js)
+frontend/.env.local
+frontend/.env.*.local
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/dist/
+next-env.d.ts
+
+# Backend (Python)
+backend/.env
+backend/data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Backtest data cache (regenerated on demand, see strategy_lab.py)
+.cache/
+
+# Generated reports
+reports/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings (machine-specific, not shared project config)
+.claude/settings.local.json

@@ -32,7 +32,8 @@ class DataFetcher:
             self.ticker,
             start=start_date,
             end=end_date,
-            progress=False
+            progress=False,
+            auto_adjust=True
         )
         
         self.data = self.normalize_columns(self.data)

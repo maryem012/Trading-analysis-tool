@@ -516,7 +516,8 @@ def _table_html(df: pd.DataFrame, edge_mask: Optional[pd.Series] = None) -> str:
     for pos, (idx, row) in enumerate(df.iterrows()):
         is_edge = bool(edge_mask.iloc[pos]) if edge_mask is not None else False
         cells = ''.join(f"<td>{'–' if pd.isna(v) else v}</td>" for v in row)
-        body_rows.append(f"<tr{' class=\"edge\"' if is_edge else ''}>{cells}</tr>")
+        row_class = ' class="edge"' if is_edge else ''
+        body_rows.append(f"<tr{row_class}>{cells}</tr>")
 
     return (f'<div class="table-wrap"><table><thead><tr>{header}</tr></thead>'
             f'<tbody>{"".join(body_rows)}</tbody></table></div>')

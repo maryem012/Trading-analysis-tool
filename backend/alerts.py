@@ -13,6 +13,8 @@ Not safe for high-concurrency writes; fine for one browser subscribing
 occasionally.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging

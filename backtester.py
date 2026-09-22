@@ -11,6 +11,8 @@ A strategy is just a function: strategy(df, i) -> "buy" | "sell" | "hold"
 It looks at df up to and including row i and says what it wants to do.
 """
 
+from __future__ import annotations
+
 import sys
 import math
 from dataclasses import dataclass, field

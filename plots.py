@@ -5,6 +5,8 @@ Kept out of dashboard.py so the same charts can be used from a notebook or
 script, and so they can be rendered and eyeballed without Streamlit.
 """
 
+from __future__ import annotations
+
 from typing import Optional
 
 import numpy as np

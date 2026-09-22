@@ -22,6 +22,8 @@ single-repo demo like this one), so:
   - No commissions, slippage, or borrow costs are modeled anywhere in here.
 """
 
+from __future__ import annotations
+
 import itertools
 import sys
 from dataclasses import dataclass, field

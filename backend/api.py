@@ -11,6 +11,8 @@ logic — the sys.path insert below makes that work whether uvicorn is launched
 from backend/ (as above) or from the repo root.
 """
 
+from __future__ import annotations
+
 import asyncio
 import math
 import os

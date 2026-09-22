@@ -51,6 +51,8 @@ export default function CompareView({ assets }: CompareViewProps) {
             <option value={180}>180</option>
             <option value={365}>365</option>
             <option value={730}>730</option>
+            <option value={1825}>1825 (5y)</option>
+            <option value={3650}>3650 (10y)</option>
           </select>
         </div>
         <button type="submit" className="run-button inline" disabled={loading}>

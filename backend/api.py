@@ -102,7 +102,7 @@ ASSETS = [
 class BacktestRequest(BaseModel):
     ticker: str = Field(..., examples=["SPY"])
     strategy: str = Field(..., examples=["sma_crossover"])
-    days: int = Field(365, ge=30, le=730, description="Lookback window in calendar days")
+    days: int = Field(365, ge=30, le=3650, description="Lookback window in calendar days")
     initial_capital: float = Field(10_000, gt=0)
     risk_per_trade: float = Field(2.0, gt=0, le=100)
     stop_loss_pct: Optional[float] = Field(5.0, gt=0)
@@ -116,7 +116,7 @@ class BacktestRequest(BaseModel):
 
 class CompareRequest(BaseModel):
     ticker: str = Field(..., examples=["SPY"])
-    days: int = Field(365, ge=30, le=730)
+    days: int = Field(365, ge=30, le=3650)
     strategy_ids: Optional[List[str]] = Field(
         None, description="Subset of /api/strategies ids; omit to compare all of them")
 
@@ -126,7 +126,7 @@ class MatrixRequest(BaseModel):
         default_factory=lambda: ["SPY", "URTH", "^GSPC"], min_length=1, max_length=8,
         description="Up to 8 tickers — each new one is a fresh backtest per strategy, "
                     "so this scales fast (8 tickers × 5 strategies = 40 backtests)")
-    years: float = Field(2.0, ge=0.5, le=5.0)
+    years: float = Field(2.0, ge=0.5, le=10.0)
     strategy_ids: Optional[List[str]] = None
 
 

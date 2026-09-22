@@ -111,14 +111,14 @@ export default function ControlPanel({
           id="days"
           type="range"
           min={30}
-          max={730}
-          step={5}
+          max={3650}
+          step={15}
           value={days}
           onChange={(e) => onDaysChange(Number(e.target.value))}
         />
         <div className="range-value">
           <span>30d</span>
-          <span>730d</span>
+          <span>3650d</span>
         </div>
       </div>
 

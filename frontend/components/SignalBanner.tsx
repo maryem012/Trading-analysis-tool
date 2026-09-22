@@ -84,8 +84,11 @@ export default function SignalBanner({ data }: SignalBannerProps) {
       <div className="rec-grid">
         {data.recommendations.map((r) => (
           <div key={r.strategy_id} className="rec-row">
-            <span className="rec-name">{r.strategy_name}</span>
-            <SignalPill signal={r.signal} />
+            <div className="rec-row-top">
+              <span className="rec-name">{r.strategy_name}</span>
+              <SignalPill signal={r.signal} />
+            </div>
+            {r.reason && <p className="rec-reason">{r.reason}</p>}
           </div>
         ))}
       </div>

@@ -92,6 +92,7 @@ export interface Recommendation {
   strategy_id: string
   strategy_name: string
   signal: Signal
+  reason?: string
 }
 
 export interface SignalsResponse {

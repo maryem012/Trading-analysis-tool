@@ -42,6 +42,7 @@ from backtester import (  # noqa: E402
 from data_fetcher import DataFetcher  # noqa: E402
 from strategy_lab import compare_strategies, multi_asset_test  # noqa: E402
 import alerts  # noqa: E402
+from explain import explain_signal  # noqa: E402
 
 app = FastAPI(
     title="Trading Backtester API",
@@ -253,7 +254,8 @@ def signals(ticker: str, days: int = 365):
             sig = fn(df, i)
         except Exception:
             sig = "hold"
-        recommendations.append({"strategy_id": sid, "strategy_name": name, "signal": sig})
+        reason = explain_signal(sid, df, i)
+        recommendations.append({"strategy_id": sid, "strategy_name": name, "signal": sig, "reason": reason})
 
     return _to_jsonable({
         "ticker": ticker.upper(),

@@ -574,23 +574,35 @@ tr.open-row td {
 
 .rec-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
 }
 
 .rec-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
 }
 
+.rec-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .rec-name {
   font-size: 0.84rem;
   color: var(--text-secondary);
+}
+
+.rec-reason {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
 }
 
 .disclaimer-line {

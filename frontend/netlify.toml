@@ -6,10 +6,10 @@
   publish = "out"
 
 [build.environment]
-  NEXT_PUBLIC_API_URL = "https://trading-api-prod.railway.app"
+  NEXT_PUBLIC_API_URL = "https://trading-analysis-tool-production.up.railway.app"
 
 [context.deploy-preview.environment]
-  NEXT_PUBLIC_API_URL = "https://trading-api-prod.railway.app"
+  NEXT_PUBLIC_API_URL = "https://trading-analysis-tool-production.up.railway.app"
 
 # Optional convenience: lets the frontend call same-origin "/api/*" instead of
 # the Railway URL directly, if you'd rather avoid CORS entirely. Update the
@@ -17,6 +17,6 @@
 # (same origin) if you switch to this.
 [[redirects]]
   from = "/api/*"
-  to = "https://trading-api-prod.railway.app/api/:splat"
+  to = "https://trading-analysis-tool-production.up.railway.app/api/:splat"
   status = 200
   force = true

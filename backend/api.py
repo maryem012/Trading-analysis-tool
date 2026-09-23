@@ -25,8 +25,9 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
-# Must run before importing alerts.py — it reads VAPID_*/ALERT_* env vars at
-# module load time, so .env has to be loaded first or those come back empty.
+# Must run before importing alerts.py/broker.py — they read VAPID_*/ALERT_*/
+# ALPACA_* env vars at module load time, so .env has to be loaded first or
+# those come back empty.
 load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI, HTTPException  # noqa: E402
@@ -43,6 +44,7 @@ from data_fetcher import DataFetcher  # noqa: E402
 from strategy_lab import compare_strategies, multi_asset_test  # noqa: E402
 import alerts  # noqa: E402
 from explain import explain_signal  # noqa: E402
+import broker  # noqa: E402
 
 app = FastAPI(
     title="Trading Backtester API",
@@ -498,3 +500,47 @@ def push_test(req: TestPushRequest):
     if not ok:
         raise HTTPException(status_code=502, detail="Push send failed — see server logs")
     return {"status": "sent"}
+
+
+# ============================================================================
+# Broker (Alpaca paper trading — see broker.py)
+# ============================================================================
+
+def _require_broker() -> None:
+    if not broker.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Broker isn't configured on this server — set ALPACA_API_KEY/ALPACA_SECRET_KEY.",
+        )
+
+
+@app.get("/api/broker/status")
+def broker_status():
+    return {"configured": broker.is_configured(), "paper": broker.ALPACA_PAPER}
+
+
+@app.get("/api/broker/account")
+def broker_account():
+    _require_broker()
+    try:
+        return _to_jsonable(broker.get_account())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Couldn't reach Alpaca: {e}")
+
+
+@app.get("/api/broker/positions")
+def broker_positions():
+    _require_broker()
+    try:
+        return _to_jsonable(broker.list_positions())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Couldn't reach Alpaca: {e}")
+
+
+@app.get("/api/broker/orders")
+def broker_orders(limit: int = 50):
+    _require_broker()
+    try:
+        return _to_jsonable(broker.list_orders(limit=limit))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Couldn't reach Alpaca: {e}")

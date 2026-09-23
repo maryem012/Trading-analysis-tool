@@ -1,6 +1,6 @@
 'use client'
 
-export type TabId = 'backtest' | 'market' | 'compare' | 'matrix' | 'alerts'
+export type TabId = 'backtest' | 'market' | 'compare' | 'matrix' | 'alerts' | 'portfolio'
 
 const TABS: { id: TabId; label: string; hint: string }[] = [
   { id: 'backtest', label: '🔁 Backtest', hint: 'Test one strategy on one asset over time' },
@@ -8,6 +8,7 @@ const TABS: { id: TabId; label: string; hint: string }[] = [
   { id: 'compare', label: '⚖️ Compare Strategies', hint: 'Rank every strategy against each other on one asset' },
   { id: 'matrix', label: '🗺️ Asset Matrix', hint: 'See which strategies work best on which assets' },
   { id: 'alerts', label: '🔔 Alerts', hint: 'Get a push notification when a signal changes' },
+  { id: 'portfolio', label: '💼 Portfolio', hint: 'A real paper-trading account (fake money) via Alpaca' },
 ]
 
 interface TabBarProps {

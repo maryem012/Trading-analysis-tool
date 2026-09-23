@@ -7,6 +7,7 @@ import MarketView from '@/components/MarketView'
 import CompareView from '@/components/CompareView'
 import MatrixView from '@/components/MatrixView'
 import AlertsView from '@/components/AlertsView'
+import PortfolioView from '@/components/PortfolioView'
 import PracticeBanner from '@/components/PracticeBanner'
 import GuidePanel from '@/components/GuidePanel'
 import { ApiError, fetchAssets, fetchStrategies } from '@/lib/api'
@@ -53,6 +54,7 @@ export default function Home() {
       {tab === 'compare' && <CompareView assets={assets} />}
       {tab === 'matrix' && <MatrixView assets={assets} />}
       {tab === 'alerts' && <AlertsView assets={assets} strategies={strategies} />}
+      {tab === 'portfolio' && <PortfolioView assets={assets} strategies={strategies} />}
     </div>
   )
 }

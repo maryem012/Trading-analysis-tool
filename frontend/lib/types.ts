@@ -155,3 +155,37 @@ export interface PushStatus {
   subscribed: boolean
   watchlist: WatchlistItem[]
 }
+
+export interface BrokerStatus {
+  configured: boolean
+  paper: boolean
+}
+
+export interface Account {
+  status: string
+  cash: number
+  equity: number
+  buying_power: number
+  portfolio_value: number
+}
+
+export interface Position {
+  ticker: string
+  qty: number
+  avg_entry_price: number
+  current_price: number
+  market_value: number
+  unrealized_pl: number
+  unrealized_plpc: number
+}
+
+export interface BrokerOrder {
+  id: string
+  ticker: string
+  side: 'buy' | 'sell' | null
+  qty: number | null
+  notional: number | null
+  status: string | null
+  submitted_at: string | null
+  filled_avg_price: number | null
+}

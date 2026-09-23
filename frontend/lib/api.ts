@@ -1,7 +1,11 @@
 import type {
+  Account,
   BacktestResponse,
+  BrokerOrder,
+  BrokerStatus,
   CompareResponse,
   MatrixResponse,
+  Position,
   PriceHistoryResponse,
   PushStatus,
   SignalsResponse,
@@ -143,6 +147,26 @@ export async function sendTestPush(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ subscription }),
   })
+  return handle(res)
+}
+
+export async function fetchBrokerStatus(): Promise<BrokerStatus> {
+  const res = await fetch(`${API_URL}/api/broker/status`)
+  return handle(res)
+}
+
+export async function fetchAccount(): Promise<Account> {
+  const res = await fetch(`${API_URL}/api/broker/account`)
+  return handle(res)
+}
+
+export async function fetchPositions(): Promise<Position[]> {
+  const res = await fetch(`${API_URL}/api/broker/positions`)
+  return handle(res)
+}
+
+export async function fetchOrders(limit = 50): Promise<BrokerOrder[]> {
+  const res = await fetch(`${API_URL}/api/broker/orders?limit=${limit}`)
   return handle(res)
 }
 

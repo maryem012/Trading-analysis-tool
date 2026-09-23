@@ -38,13 +38,6 @@ class DataFetcher:
         
         self.data = self.normalize_columns(self.data)
 
-        # yfinance can include a trailing row for the current (still in
-        # progress, or not-yet-opened) trading day with an all-NaN close —
-        # not usable data, and silently corrupts whatever reads the "latest"
-        # bar (signals, backtests, the dashboard) if left in.
-        if 'close' in self.data.columns:
-            self.data = self.data[self.data['close'].notna()]
-
         print(f"Fetched {len(self.data)} candles")
         return self.data
 
@@ -59,6 +52,15 @@ class DataFetcher:
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
         df.columns = [str(col).lower().replace(' ', '_') for col in df.columns]
+
+        # yfinance can include a trailing row for the current (still in
+        # progress, or not-yet-opened) trading day with an all-NaN close —
+        # not usable data, and silently corrupts whatever reads the "latest"
+        # bar (signals, backtests, the dashboard) if left in. Every caller
+        # (DataFetcher.fetch_data and strategy_lab.get_price_data) routes
+        # through this method, so fixing it here covers both.
+        if 'close' in df.columns:
+            df = df[df['close'].notna()]
         return df
 
     def add_indicators(self, df: Optional[pd.DataFrame] = None) -> pd.DataFrame:

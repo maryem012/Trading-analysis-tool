@@ -8,7 +8,8 @@ interface StrategyTableProps {
   showTicker?: boolean
 }
 
-function fmtPct(v: number): string {
+function fmtPct(v: number | null): string {
+  if (v == null) return '—'
   return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
 }
 
@@ -36,7 +37,7 @@ export default function StrategyTable({ rows, title, showTicker = false }: Strat
               <tr key={i} className={r.has_edge ? 'edge-row' : undefined}>
                 <td>{r.strategy}</td>
                 {showTicker && <td>{r.ticker}</td>}
-                <td className={r.total_return_pct >= 0 ? 'text-good' : 'text-bad'}>
+                <td className={r.total_return_pct != null && r.total_return_pct >= 0 ? 'text-good' : r.total_return_pct != null ? 'text-bad' : undefined}>
                   {fmtPct(r.total_return_pct)}
                 </td>
                 <td>{r.win_rate_pct.toFixed(1)}%</td>

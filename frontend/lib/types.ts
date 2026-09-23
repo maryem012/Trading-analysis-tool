@@ -120,8 +120,8 @@ export interface StrategyRow {
   closed_trades: number
   open_trades: number
   win_rate_pct: number
-  total_return_pct: number
-  buy_hold_return_pct: number
+  total_return_pct: number | null
+  buy_hold_return_pct: number | null
   sharpe_ratio: number
   max_drawdown_pct: number
   profit_factor: number | null

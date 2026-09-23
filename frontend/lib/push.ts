@@ -15,6 +15,20 @@ export function isPushSupported(): boolean {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
 }
 
+// Every iOS browser (Chrome, Firefox, Edge included) runs on Safari's engine
+// underneath — Apple's App Store rule — so none of them support web push in
+// a plain browser tab, regardless of which one you're using. It only works
+// once the site is installed to the Home Screen (iOS 16.4+).
+export function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent)
+}
+
+export function isInstalledPWA(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true
+}
+
 /** Asks the browser for notification permission, then creates (or reuses) a push subscription. */
 export async function subscribeToPush(vapidPublicKey: string): Promise<PushSubscription> {
   const permission = await Notification.requestPermission()

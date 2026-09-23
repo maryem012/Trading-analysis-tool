@@ -45,7 +45,7 @@ export default function HeatmapGrid({ rows, metric, label, title }: HeatmapGridP
   const tickers = Array.from(new Set(rows.map((r) => r.ticker)))
   const byKey = new Map(rows.map((r) => [`${r.strategy}|${r.ticker}`, r]))
 
-  const values = rows.map((r) => Number(r[metric])).filter(Number.isFinite)
+  const values = rows.filter((r) => r[metric] != null).map((r) => Number(r[metric])).filter(Number.isFinite)
   const vmax = Math.max(...values.map(Math.abs), 1e-9)
 
   return (
@@ -67,7 +67,7 @@ export default function HeatmapGrid({ rows, metric, label, title }: HeatmapGridP
                 <th className="row-label">{s}</th>
                 {tickers.map((t) => {
                   const row = byKey.get(`${s}|${t}`)
-                  const v = row ? Number(row[metric]) : NaN
+                  const v = row && row[metric] != null ? Number(row[metric]) : NaN
                   if (!Number.isFinite(v)) {
                     return (
                       <td key={t} className="heatmap-cell empty">

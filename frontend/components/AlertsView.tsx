@@ -5,7 +5,7 @@ import {
   ApiError, fetchPushStatus, fetchVapidPublicKey, sendTestPush,
   subscribePush, unsubscribePush, updatePushWatchlist,
 } from '@/lib/api'
-import { getExistingSubscription, isPushSupported, subscribeToPush, unsubscribeFromPush } from '@/lib/push'
+import { getExistingSubscription, isIOS, isPushSupported, subscribeToPush, unsubscribeFromPush } from '@/lib/push'
 import type { StrategyOption, WatchlistItem } from '@/lib/types'
 import TickerInput from './TickerInput'
 
@@ -167,7 +167,17 @@ export default function AlertsView({ assets, strategies }: AlertsViewProps) {
           signal that&apos;s already been sitting there; only for a fresh change.
         </p>
 
-        {status === 'unsupported' && (
+        {status === 'unsupported' && isIOS() && (
+          <div className="error-banner">
+            iOS blocks push notifications in every browser tab — Chrome included, since
+            Apple requires all iOS browsers to share Safari&apos;s engine. To fix it: open this
+            site in <strong>Safari</strong>, tap the Share button, tap{' '}
+            <strong>&ldquo;Add to Home Screen&rdquo;</strong>, then open the app from that new
+            icon (not from a browser tab) and try Enable Alerts again. Requires iOS 16.4+.
+          </div>
+        )}
+
+        {status === 'unsupported' && !isIOS() && (
           <div className="error-banner">
             This browser doesn&apos;t support push notifications (or you&apos;re in a mode
             that blocks them, like private/incognito browsing on some browsers). Try a

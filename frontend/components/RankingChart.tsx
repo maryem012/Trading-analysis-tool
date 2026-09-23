@@ -17,6 +17,7 @@ const COLOR_MUTED = '#898781'
 
 export default function RankingChart({ rows, metric, label, title }: RankingChartProps) {
   const data = rows
+    .filter((r) => r[metric] != null)
     .map((r) => ({ name: r.strategy, value: Number(r[metric]) }))
     .filter((d) => Number.isFinite(d.value))
     .sort((a, b) => a.value - b.value)

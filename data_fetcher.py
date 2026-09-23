@@ -38,6 +38,13 @@ class DataFetcher:
         
         self.data = self.normalize_columns(self.data)
 
+        # yfinance can include a trailing row for the current (still in
+        # progress, or not-yet-opened) trading day with an all-NaN close —
+        # not usable data, and silently corrupts whatever reads the "latest"
+        # bar (signals, backtests, the dashboard) if left in.
+        if 'close' in self.data.columns:
+            self.data = self.data[self.data['close'].notna()]
+
         print(f"Fetched {len(self.data)} candles")
         return self.data
 

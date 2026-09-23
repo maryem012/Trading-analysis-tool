@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import TabBar, { type TabId } from '@/components/TabBar'
 import BacktestView from '@/components/BacktestView'
 import MarketView from '@/components/MarketView'
+import DashboardView from '@/components/DashboardView'
 import CompareView from '@/components/CompareView'
 import MatrixView from '@/components/MatrixView'
 import AlertsView from '@/components/AlertsView'
@@ -51,6 +52,7 @@ export default function Home() {
 
       {tab === 'backtest' && <BacktestView assets={assets} strategies={strategies} />}
       {tab === 'market' && <MarketView assets={assets} />}
+      {tab === 'dashboard' && <DashboardView />}
       {tab === 'compare' && <CompareView assets={assets} />}
       {tab === 'matrix' && <MatrixView assets={assets} />}
       {tab === 'alerts' && <AlertsView assets={assets} strategies={strategies} />}

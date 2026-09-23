@@ -179,6 +179,18 @@ export interface Position {
   unrealized_plpc: number
 }
 
+export interface DashboardRow {
+  ticker: string
+  close?: number
+  consensus?: Signal
+  recommendations?: Recommendation[]
+  error?: string
+}
+
+export interface DashboardResponse {
+  rows: DashboardRow[]
+}
+
 export interface AutoTradeItem {
   ticker: string
   strategy_id: string

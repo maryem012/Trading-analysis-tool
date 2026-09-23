@@ -1,15 +1,10 @@
 'use client'
 
-import type { SignalsResponse, Signal } from '@/lib/types'
+import type { SignalsResponse } from '@/lib/types'
+import SignalPill from './SignalPill'
 
 interface SignalBannerProps {
   data: SignalsResponse
-}
-
-function SignalPill({ signal }: { signal: Signal }) {
-  const label = signal === 'buy' ? 'BUY' : signal === 'sell' ? 'SELL' : 'HOLD'
-  const cls = signal === 'buy' ? 'win' : signal === 'sell' ? 'loss' : 'open'
-  return <span className={`pill ${cls}`}>{label}</span>
 }
 
 function StatusBadge({ good, label, activeText, inactiveText }: {
@@ -43,7 +38,7 @@ export default function SignalBanner({ data }: SignalBannerProps) {
       <div className="signal-header">
         <div>
           <h3>
-            {data.ticker} — ${data.close.toFixed(2)}
+            {data.ticker} — {data.close != null ? `$${data.close.toFixed(2)}` : '—'}
           </h3>
           <p className="meta">As of {data.as_of}</p>
         </div>

@@ -5,6 +5,7 @@ import type {
   BrokerOrder,
   BrokerStatus,
   CompareResponse,
+  DashboardResponse,
   MatrixResponse,
   Position,
   PriceHistoryResponse,
@@ -74,6 +75,11 @@ export async function fetchPriceHistory(ticker: string, days: number): Promise<P
 
 export async function fetchSignals(ticker: string, days = 365): Promise<SignalsResponse> {
   const res = await fetch(`${API_URL}/api/signals?ticker=${encodeURIComponent(ticker)}&days=${days}`)
+  return handle(res)
+}
+
+export async function fetchDashboard(): Promise<DashboardResponse> {
+  const res = await fetch(`${API_URL}/api/dashboard`)
   return handle(res)
 }
 

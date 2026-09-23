@@ -230,6 +230,30 @@ def price_history(ticker: str, days: int = 365):
     return _to_jsonable({"ticker": ticker.upper(), "days": days, "bars": bars})
 
 
+def _compute_recommendations(df: pd.DataFrame, i: int) -> list:
+    recommendations = []
+    for sid, (name, fn) in STRATEGIES.items():
+        try:
+            sig = fn(df, i)
+        except Exception:
+            sig = "hold"
+        reason = explain_signal(sid, df, i)
+        recommendations.append({"strategy_id": sid, "strategy_name": name, "signal": sig, "reason": reason})
+    return recommendations
+
+
+def _consensus(recommendations: list) -> str:
+    """Majority vote across every strategy's current signal — 'hold' on a tie."""
+    counts = {"buy": 0, "sell": 0, "hold": 0}
+    for r in recommendations:
+        counts[r["signal"]] = counts.get(r["signal"], 0) + 1
+    if counts["buy"] > counts["sell"] and counts["buy"] > counts["hold"]:
+        return "buy"
+    if counts["sell"] > counts["buy"] and counts["sell"] > counts["hold"]:
+        return "sell"
+    return "hold"
+
+
 @app.get("/api/signals")
 def signals(ticker: str, days: int = 365):
     """
@@ -253,14 +277,7 @@ def signals(ticker: str, days: int = 365):
 
     latest = fetcher.get_latest_signals(df)
     i = len(df) - 1
-    recommendations = []
-    for sid, (name, fn) in STRATEGIES.items():
-        try:
-            sig = fn(df, i)
-        except Exception:
-            sig = "hold"
-        reason = explain_signal(sid, df, i)
-        recommendations.append({"strategy_id": sid, "strategy_name": name, "signal": sig, "reason": reason})
+    recommendations = _compute_recommendations(df, i)
 
     return _to_jsonable({
         "ticker": ticker.upper(),
@@ -278,6 +295,43 @@ def signals(ticker: str, days: int = 365):
         "price_above_sma_50": latest["price_above_sma_50"],
         "recommendations": recommendations,
     })
+
+
+def _dashboard_row(ticker: str) -> dict:
+    try:
+        fetcher = DataFetcher(ticker)
+        df = fetcher.fetch_data(days=365)
+        if df is None or len(df) < 2:
+            return {"ticker": ticker, "error": "No data returned"}
+        df = fetcher.add_indicators(df)
+    except Exception as e:
+        return {"ticker": ticker, "error": str(e)}
+
+    i = len(df) - 1
+    recommendations = _compute_recommendations(df, i)
+    return {
+        "ticker": ticker,
+        "close": float(df["close"].iloc[i]),
+        "consensus": _consensus(recommendations),
+        "recommendations": recommendations,
+    }
+
+
+@app.get("/api/dashboard")
+def dashboard(tickers: Optional[str] = None):
+    """
+    One row per asset with a consensus BUY/SELL/HOLD call (majority vote
+    across every strategy's current signal) — a scannable overview instead
+    of checking each ticker individually on the Market & Signals tab.
+
+    tickers: optional comma-separated override; defaults to the built-in
+    ASSETS list. Fetched sequentially, not in parallel — yfinance's shared
+    session/crumb handling isn't safe under concurrent calls (confirmed:
+    parallel fetches here corrupted data for multiple tickers at once).
+    """
+    ticker_list = [t.strip() for t in tickers.split(",") if t.strip()] if tickers else ASSETS
+    rows = [_dashboard_row(t) for t in ticker_list]
+    return _to_jsonable({"rows": rows})
 
 
 @app.post("/api/backtest")

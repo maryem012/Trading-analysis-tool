@@ -26,6 +26,7 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  overflow-x: hidden;
 }
 
 body {
@@ -393,6 +394,15 @@ tr.open-row td {
     margin-left: 0;
     text-align: left;
     max-width: none;
+  }
+
+  /* Below 16px, iOS Safari auto-zooms in on focus — jarring on a form
+     someone's actually meant to use one-handed on a phone. */
+  .field select,
+  .field input[type='text'],
+  .field input[type='number'],
+  .money-input input {
+    font-size: 16px;
   }
 }
 
@@ -965,14 +975,21 @@ tr.edge-row {
 
 .watchlist li {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.86rem;
   color: var(--text-secondary);
+}
+
+.watchlist li > span {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .watchlist li strong {

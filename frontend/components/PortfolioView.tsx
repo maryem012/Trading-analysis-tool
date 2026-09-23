@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import {
-  ApiError, closePosition, fetchAccount, fetchBrokerStatus, fetchOrders, fetchPositions, placeOrder,
+  ApiError, closePosition, fetchAccount, fetchAutoTrade, fetchBrokerStatus, fetchOrders,
+  fetchPositions, placeOrder, updateAutoTrade,
 } from '@/lib/api'
-import type { Account, BrokerOrder, Position, StrategyOption } from '@/lib/types'
+import type { Account, AutoTradeItem, BrokerOrder, Position, StrategyOption } from '@/lib/types'
 import TickerInput from './TickerInput'
 
 interface PortfolioViewProps {
   assets: string[]
   strategies: StrategyOption[]
 }
+
+const MAX_AUTO_TRADE = 20
 
 function fmtMoney(v: number | null): string {
   if (v == null) return '—'
@@ -22,7 +25,7 @@ function fmtPct(v: number | null): string {
   return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
 }
 
-export default function PortfolioView({ assets, strategies: _strategies }: PortfolioViewProps) {
+export default function PortfolioView({ assets, strategies }: PortfolioViewProps) {
   const [configured, setConfigured] = useState<boolean | null>(null)
   const [account, setAccount] = useState<Account | null>(null)
   const [positions, setPositions] = useState<Position[]>([])
@@ -39,6 +42,12 @@ export default function PortfolioView({ assets, strategies: _strategies }: Portf
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null)
   const [closingTicker, setClosingTicker] = useState<string | null>(null)
 
+  const [autoTrade, setAutoTrade] = useState<AutoTradeItem[]>([])
+  const [autoTicker, setAutoTicker] = useState('SPY')
+  const [autoStrategy, setAutoStrategy] = useState(strategies[0]?.id || 'sma_crossover')
+  const [autoNotional, setAutoNotional] = useState(50)
+  const [autoError, setAutoError] = useState<string | null>(null)
+
   async function load() {
     setLoading(true)
     setError(null)
@@ -46,10 +55,13 @@ export default function PortfolioView({ assets, strategies: _strategies }: Portf
       const status = await fetchBrokerStatus()
       setConfigured(status.configured)
       if (status.configured) {
-        const [a, p, o] = await Promise.all([fetchAccount(), fetchPositions(), fetchOrders(20)])
+        const [a, p, o, at] = await Promise.all([
+          fetchAccount(), fetchPositions(), fetchOrders(20), fetchAutoTrade(),
+        ])
         setAccount(a)
         setPositions(p)
         setOrders(o)
+        setAutoTrade(at)
       }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't reach the broker API.")
@@ -61,6 +73,12 @@ export default function PortfolioView({ assets, strategies: _strategies }: Portf
   useEffect(() => {
     load()
   }, [])
+
+  useEffect(() => {
+    if (strategies.length && !strategies.some((s) => s.id === autoStrategy)) {
+      setAutoStrategy(strategies[0].id)
+    }
+  }, [strategies, autoStrategy])
 
   async function handlePlaceOrder() {
     setPlacing(true)
@@ -89,6 +107,31 @@ export default function PortfolioView({ assets, strategies: _strategies }: Portf
       setClosingTicker(null)
     }
   }
+
+  async function syncAutoTrade(next: AutoTradeItem[]) {
+    const prev = autoTrade
+    setAutoTrade(next)
+    setAutoError(null)
+    try {
+      await updateAutoTrade(next)
+    } catch (e) {
+      setAutoTrade(prev)
+      setAutoError(e instanceof ApiError ? e.message : "Couldn't save auto-trade settings.")
+    }
+  }
+
+  function addAutoTrade() {
+    if (autoTrade.length >= MAX_AUTO_TRADE) return
+    const exists = autoTrade.some((a) => a.ticker === autoTicker && a.strategy_id === autoStrategy)
+    if (exists) return
+    syncAutoTrade([...autoTrade, { ticker: autoTicker, strategy_id: autoStrategy, notional: autoNotional }])
+  }
+
+  function removeAutoTrade(i: number) {
+    syncAutoTrade(autoTrade.filter((_, idx) => idx !== i))
+  }
+
+  const strategyName = (id: string) => strategies.find((s) => s.id === id)?.name || id
 
   return (
     <div className="results">
@@ -281,6 +324,76 @@ export default function PortfolioView({ assets, strategies: _strategies }: Portf
                 </tbody>
               </table>
             </div>
+          )}
+        </div>
+      )}
+
+      {configured === true && (
+        <div className="card">
+          <h3>Auto-Trade ({autoTrade.length}/{MAX_AUTO_TRADE})</h3>
+          <p className="meta" style={{ marginBottom: 12 }}>
+            The moment a watched strategy&apos;s signal flips to BUY or SELL, this places (or
+            closes) a paper order automatically — checked on the same interval as Alerts. Off by
+            default; nothing trades until you add a pair below.
+          </p>
+
+          <div className="inline-controls" style={{ marginBottom: 4 }}>
+            <div className="field">
+              <label htmlFor="auto-ticker">Ticker</label>
+              <TickerInput id="auto-ticker" value={autoTicker} onChange={setAutoTicker} suggestions={nonCryptoAssets} />
+            </div>
+            <div className="field">
+              <label htmlFor="auto-strategy">Strategy</label>
+              <select id="auto-strategy" value={autoStrategy} onChange={(e) => setAutoStrategy(e.target.value)}>
+                {strategies.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="auto-notional">Amount</label>
+              <div className="money-input">
+                <span className="money-prefix">$</span>
+                <input
+                  id="auto-notional"
+                  type="number"
+                  min={1}
+                  max={1000}
+                  step={1}
+                  value={autoNotional}
+                  onChange={(e) => setAutoNotional(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              className="run-button inline"
+              onClick={addAutoTrade}
+              disabled={autoTrade.length >= MAX_AUTO_TRADE}
+            >
+              + Add
+            </button>
+          </div>
+
+          {autoError && <div className="error-banner" style={{ marginTop: 8 }}>{autoError}</div>}
+
+          {autoTrade.length === 0 ? (
+            <div className="empty-state">Nothing set to auto-trade yet.</div>
+          ) : (
+            <ul className="watchlist">
+              {autoTrade.map((a, i) => (
+                <li key={`${a.ticker}-${a.strategy_id}`}>
+                  <span>
+                    <strong>{a.ticker}</strong> — {strategyName(a.strategy_id)} — ${a.notional}/trade
+                  </span>
+                  <button type="button" className="watchlist-remove" onClick={() => removeAutoTrade(i)}>
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}

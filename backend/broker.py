@@ -13,16 +13,30 @@ keys, not a rewrite.
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
-from typing import Optional
+from typing import Dict, List, Optional
 
 from alpaca.trading.client import TradingClient
 from alpaca.trading.enums import OrderSide, QueryOrderStatus, TimeInForce
 from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest
 
+from signal_check import current_signal
+from storage import DATA_DIR, load_json, save_json
+
+logger = logging.getLogger("broker")
+
 ALPACA_API_KEY = os.environ.get("ALPACA_API_KEY", "")
 ALPACA_SECRET_KEY = os.environ.get("ALPACA_SECRET_KEY", "")
 ALPACA_PAPER = True
+
+# Auto-trade config is a separate, simpler concept from the push watchlist —
+# no browser PushSubscription is involved, and a user might want one without
+# the other. Kept in its own file rather than reusing alerts.py's storage.
+AUTO_TRADE_FILE = DATA_DIR / "auto_trade.json"
+AUTO_TRADE_LAST_SIGNALS_FILE = DATA_DIR / "auto_trade_last_signals.json"
+MAX_AUTO_TRADE_ITEMS = 20
 
 # Alpaca's notional (dollar-amount) orders only work for US equities/ETFs,
 # not crypto — these are the crypto tickers this app otherwise supports.
@@ -119,3 +133,71 @@ def close_position(ticker: str) -> Optional[dict]:
         "side": str(o.side.value) if o.side else None,
         "status": str(o.status.value) if o.status else None,
     }
+
+
+# --------------------------------------------------------------- auto-trade
+
+def get_auto_trade_items() -> List[dict]:
+    return load_json(AUTO_TRADE_FILE, [])
+
+
+def set_auto_trade_items(items: List[dict]) -> None:
+    save_json(AUTO_TRADE_FILE, items)
+
+
+def check_and_trade(strategies: Dict[str, tuple]) -> int:
+    """
+    Re-check every auto-trade pair and place a paper order the moment its
+    signal flips to buy/sell — mirrors alerts.check_and_notify's flip
+    detection, but acts on it instead of just notifying. Kept separate from
+    alerts.py (push stays push-only) other than sharing signal_check.py.
+    """
+    items = get_auto_trade_items()
+    if not items:
+        return 0
+
+    last_signals = load_json(AUTO_TRADE_LAST_SIGNALS_FILE, {})
+    traded = 0
+
+    for item in items:
+        ticker, sid = item.get("ticker"), item.get("strategy_id")
+        if not ticker or sid not in strategies or is_crypto(ticker):
+            continue
+        _, fn = strategies[sid]
+        signal = current_signal(ticker, fn)
+        if signal is None:
+            continue
+
+        state_key = f"{ticker}|{sid}"
+        previous = last_signals.get(state_key)
+        last_signals[state_key] = signal
+
+        if signal not in ("buy", "sell") or signal == previous:
+            continue
+
+        try:
+            if signal == "buy":
+                place_market_order(ticker, "buy", float(item.get("notional", 50)))
+            else:
+                close_position(ticker)
+            traded += 1
+        except Exception:
+            logger.exception(f"Auto-trade order failed for {ticker}/{sid}")
+
+    save_json(AUTO_TRADE_LAST_SIGNALS_FILE, last_signals)
+    return traded
+
+
+async def run_scheduler(strategies: Dict[str, tuple]) -> None:
+    """Background loop — start once via asyncio.create_task() at app startup."""
+    from alerts import CHECK_INTERVAL_MINUTES  # deferred: avoids import ordering issues at module load
+
+    logger.info(f"Auto-trade scheduler started — checking every {CHECK_INTERVAL_MINUTES} min")
+    while True:
+        try:
+            traded = await asyncio.to_thread(check_and_trade, strategies)
+            if traded:
+                logger.info(f"Auto-trade placed {traded} order(s)")
+        except Exception:
+            logger.exception("Auto-trade check failed")
+        await asyncio.sleep(CHECK_INTERVAL_MINUTES * 60)

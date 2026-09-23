@@ -19,16 +19,15 @@ import asyncio
 import json
 import logging
 import os
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from pywebpush import WebPushException, webpush
 
-from data_fetcher import DataFetcher
+from signal_check import current_signal as _current_signal
+from storage import DATA_DIR, load_json as _load_json, save_json as _save_json
 
 logger = logging.getLogger("alerts")
 
-DATA_DIR = Path(__file__).parent / "data"
 SUBSCRIPTIONS_FILE = DATA_DIR / "subscriptions.json"
 LAST_SIGNALS_FILE = DATA_DIR / "last_signals.json"
 
@@ -36,24 +35,6 @@ VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:you@example.com")
 CHECK_INTERVAL_MINUTES = float(os.environ.get("ALERT_CHECK_INTERVAL_MINUTES", "15"))
-
-
-def _load_json(path: Path, default):
-    if not path.exists():
-        return default
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return default
-
-
-def _save_json(path: Path, data) -> None:
-    DATA_DIR.mkdir(exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-    tmp.replace(path)  # atomic on the same filesystem
 
 
 # ---------------------------------------------------------------- subscriptions
@@ -109,22 +90,6 @@ def send_push(subscription: dict, title: str, body: str, url: str = "/") -> bool
             remove_subscription(subscription.get("endpoint", ""))
         logger.warning(f"Push failed ({status}): {e}")
         return False
-
-
-# ------------------------------------------------------------- signal checking
-
-def _current_signal(ticker: str, strategy_fn) -> Optional[str]:
-    """Same logic as /api/signals — what would this strategy do right now?"""
-    try:
-        fetcher = DataFetcher(ticker)
-        df = fetcher.fetch_data(days=365)
-        if df is None or len(df) < 2:
-            return None
-        df = fetcher.add_indicators(df)
-        return strategy_fn(df, len(df) - 1)
-    except Exception:
-        logger.exception(f"Signal check failed for {ticker}")
-        return None
 
 
 def check_and_notify(strategies: Dict[str, tuple]) -> int:

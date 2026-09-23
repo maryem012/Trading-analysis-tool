@@ -1,5 +1,6 @@
 import type {
   Account,
+  AutoTradeItem,
   BacktestResponse,
   BrokerOrder,
   BrokerStatus,
@@ -188,6 +189,22 @@ export async function closePosition(ticker: string): Promise<BrokerOrder> {
     method: 'POST',
   })
   return handle(res)
+}
+
+export async function fetchAutoTrade(): Promise<AutoTradeItem[]> {
+  const res = await fetch(`${API_URL}/api/broker/auto-trade`)
+  const data = await handle<{ items: AutoTradeItem[] }>(res)
+  return data.items
+}
+
+export async function updateAutoTrade(items: AutoTradeItem[]): Promise<AutoTradeItem[]> {
+  const res = await fetch(`${API_URL}/api/broker/auto-trade`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  })
+  const data = await handle<{ items: AutoTradeItem[] }>(res)
+  return data.items
 }
 
 export { ApiError }

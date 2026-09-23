@@ -83,6 +83,9 @@ async def _start_alert_scheduler():
     """
     asyncio.create_task(alerts.run_scheduler(STRATEGIES))
 
+    if broker.is_configured():
+        asyncio.create_task(broker.run_scheduler(STRATEGIES))
+
 
 # A curated starting list for dropdowns/autocomplete — NOT a restriction.
 # Every endpoint accepts any ticker yfinance recognizes (any stock, ETF, index
@@ -512,6 +515,16 @@ class PlaceOrderRequest(BaseModel):
     notional: float = Field(..., gt=0, le=1000, description="Dollar amount to buy/sell")
 
 
+class AutoTradeItem(BaseModel):
+    ticker: str
+    strategy_id: str
+    notional: float = Field(50.0, gt=0, le=1000)
+
+
+class AutoTradeUpdateRequest(BaseModel):
+    items: List[AutoTradeItem] = Field(max_length=broker.MAX_AUTO_TRADE_ITEMS)
+
+
 def _require_broker() -> None:
     if not broker.is_configured():
         raise HTTPException(
@@ -575,3 +588,21 @@ def broker_close_position(ticker: str):
     if result is None:
         raise HTTPException(status_code=404, detail=f"No open position for {ticker.upper()}")
     return _to_jsonable(result)
+
+
+@app.get("/api/broker/auto-trade")
+def broker_get_auto_trade():
+    return {"items": broker.get_auto_trade_items()}
+
+
+@app.put("/api/broker/auto-trade")
+def broker_set_auto_trade(req: AutoTradeUpdateRequest):
+    unknown = [i.strategy_id for i in req.items if i.strategy_id not in STRATEGIES]
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown strategy id(s): {unknown}")
+    crypto = [i.ticker for i in req.items if broker.is_crypto(i.ticker)]
+    if crypto:
+        raise HTTPException(status_code=400, detail=f"Auto-trade doesn't support crypto yet: {crypto}")
+    items = [i.model_dump() for i in req.items]
+    broker.set_auto_trade_items(items)
+    return {"status": "updated", "items": items}

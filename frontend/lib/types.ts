@@ -179,6 +179,12 @@ export interface Position {
   unrealized_plpc: number
 }
 
+export interface AutoTradeItem {
+  ticker: string
+  strategy_id: string
+  notional: number
+}
+
 export interface BrokerOrder {
   id: string
   ticker: string

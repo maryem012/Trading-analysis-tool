@@ -16,7 +16,14 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-class ApiError extends Error {}
+class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
 
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -28,7 +35,7 @@ async function handle<T>(res: Response): Promise<T> {
     } catch {
       // response wasn't JSON — fall back to statusText
     }
-    throw new ApiError(detail)
+    throw new ApiError(detail, res.status)
   }
   return res.json()
 }

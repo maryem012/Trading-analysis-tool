@@ -51,7 +51,16 @@ export default function AlertsView({ assets, strategies }: AlertsViewProps) {
         setSubscription(sub)
         const s = await fetchPushStatus(sub.endpoint)
         if (userActedRef.current) return
-        setWatchlist(s.watchlist)
+        if (!s.subscribed) {
+          // The browser still holds a valid push subscription, but the
+          // server-side record is gone (e.g. a backend redeploy wiped its
+          // local storage — see alerts.py). Silently re-register it rather
+          // than surfacing an error or asking the user to re-enable.
+          await subscribePush(sub.toJSON() as unknown as PushSubscriptionJSON, [])
+          setWatchlist([])
+        } else {
+          setWatchlist(s.watchlist)
+        }
         setStatus('on')
       })
       .catch(() => {
@@ -101,12 +110,21 @@ export default function AlertsView({ assets, strategies }: AlertsViewProps) {
 
   async function syncWatchlist(next: WatchlistItem[]) {
     setWatchlist(next)
-    if (subscription) {
-      try {
-        await updatePushWatchlist(subscription.endpoint, next)
-      } catch (e) {
-        setError(e instanceof ApiError ? e.message : 'Could not save the watchlist.')
+    if (!subscription) return
+    try {
+      await updatePushWatchlist(subscription.endpoint, next)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        // Server-side record got lost (e.g. a redeploy happened mid-session)
+        // — re-register with the browser's still-valid subscription and retry.
+        try {
+          await subscribePush(subscription.toJSON() as unknown as PushSubscriptionJSON, next)
+          return
+        } catch {
+          // fall through to the generic error below
+        }
       }
+      setError(e instanceof ApiError ? e.message : 'Could not save the watchlist.')
     }
   }
 

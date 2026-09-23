@@ -506,6 +506,12 @@ def push_test(req: TestPushRequest):
 # Broker (Alpaca paper trading — see broker.py)
 # ============================================================================
 
+class PlaceOrderRequest(BaseModel):
+    ticker: str = Field(..., examples=["SPY"])
+    side: str = Field(..., pattern="^(buy|sell)$")
+    notional: float = Field(..., gt=0, le=1000, description="Dollar amount to buy/sell")
+
+
 def _require_broker() -> None:
     if not broker.is_configured():
         raise HTTPException(
@@ -544,3 +550,28 @@ def broker_orders(limit: int = 50):
         return _to_jsonable(broker.list_orders(limit=limit))
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Couldn't reach Alpaca: {e}")
+
+
+@app.post("/api/broker/orders")
+def broker_place_order(req: PlaceOrderRequest):
+    _require_broker()
+    if broker.is_crypto(req.ticker):
+        raise HTTPException(
+            status_code=400,
+            detail=f"{req.ticker} is a crypto asset — order placement isn't supported for it yet.",
+        )
+    try:
+        return _to_jsonable(broker.place_market_order(req.ticker, req.side, req.notional))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Order failed: {e}")
+
+
+@app.post("/api/broker/positions/{ticker}/close")
+def broker_close_position(ticker: str):
+    _require_broker()
+    result = broker.close_position(ticker)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"No open position for {ticker.upper()}")
+    return _to_jsonable(result)

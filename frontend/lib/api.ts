@@ -170,4 +170,24 @@ export async function fetchOrders(limit = 50): Promise<BrokerOrder[]> {
   return handle(res)
 }
 
+export async function placeOrder(params: {
+  ticker: string
+  side: 'buy' | 'sell'
+  notional: number
+}): Promise<BrokerOrder> {
+  const res = await fetch(`${API_URL}/api/broker/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  return handle(res)
+}
+
+export async function closePosition(ticker: string): Promise<BrokerOrder> {
+  const res = await fetch(`${API_URL}/api/broker/positions/${encodeURIComponent(ticker)}/close`, {
+    method: 'POST',
+  })
+  return handle(res)
+}
+
 export { ApiError }

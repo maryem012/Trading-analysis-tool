@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ApiError, fetchAccount, fetchBrokerStatus, fetchOrders, fetchPositions } from '@/lib/api'
+import {
+  ApiError, closePosition, fetchAccount, fetchBrokerStatus, fetchOrders, fetchPositions, placeOrder,
+} from '@/lib/api'
 import type { Account, BrokerOrder, Position, StrategyOption } from '@/lib/types'
+import TickerInput from './TickerInput'
 
 interface PortfolioViewProps {
   assets: string[]
@@ -19,13 +22,22 @@ function fmtPct(v: number | null): string {
   return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
 }
 
-export default function PortfolioView({ assets: _assets, strategies: _strategies }: PortfolioViewProps) {
+export default function PortfolioView({ assets, strategies: _strategies }: PortfolioViewProps) {
   const [configured, setConfigured] = useState<boolean | null>(null)
   const [account, setAccount] = useState<Account | null>(null)
   const [positions, setPositions] = useState<Position[]>([])
   const [orders, setOrders] = useState<BrokerOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const nonCryptoAssets = assets.filter((a) => !a.toUpperCase().endsWith('-USD'))
+  const [orderTicker, setOrderTicker] = useState('SPY')
+  const [orderSide, setOrderSide] = useState<'buy' | 'sell'>('buy')
+  const [orderNotional, setOrderNotional] = useState(50)
+  const [placing, setPlacing] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
+  const [orderSuccess, setOrderSuccess] = useState<string | null>(null)
+  const [closingTicker, setClosingTicker] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -49,6 +61,34 @@ export default function PortfolioView({ assets: _assets, strategies: _strategies
   useEffect(() => {
     load()
   }, [])
+
+  async function handlePlaceOrder() {
+    setPlacing(true)
+    setOrderError(null)
+    setOrderSuccess(null)
+    try {
+      const o = await placeOrder({ ticker: orderTicker, side: orderSide, notional: orderNotional })
+      setOrderSuccess(`${orderSide === 'buy' ? 'Bought' : 'Sold'} $${orderNotional} of ${o.ticker} — status: ${o.status}.`)
+      await load()
+    } catch (e) {
+      setOrderError(e instanceof ApiError ? e.message : 'Order failed.')
+    } finally {
+      setPlacing(false)
+    }
+  }
+
+  async function handleClosePosition(ticker: string) {
+    setClosingTicker(ticker)
+    setError(null)
+    try {
+      await closePosition(ticker)
+      await load()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : `Couldn't close ${ticker}.`)
+    } finally {
+      setClosingTicker(null)
+    }
+  }
 
   return (
     <div className="results">
@@ -109,6 +149,50 @@ export default function PortfolioView({ assets: _assets, strategies: _strategies
       )}
 
       {configured === true && (
+        <div className="card">
+          <h3>Place an Order</h3>
+          <p className="meta" style={{ marginBottom: 12 }}>
+            Market orders by dollar amount, up to $1,000 per order. Crypto isn&apos;t supported
+            here yet. Orders placed outside market hours (9:30–16:00 ET, weekdays) queue for the
+            next open automatically.
+          </p>
+          <div className="inline-controls">
+            <div className="field">
+              <label htmlFor="order-ticker">Ticker</label>
+              <TickerInput id="order-ticker" value={orderTicker} onChange={setOrderTicker} suggestions={nonCryptoAssets} />
+            </div>
+            <div className="field">
+              <label htmlFor="order-side">Side</label>
+              <select id="order-side" value={orderSide} onChange={(e) => setOrderSide(e.target.value as 'buy' | 'sell')}>
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="order-notional">Amount</label>
+              <div className="money-input">
+                <span className="money-prefix">$</span>
+                <input
+                  id="order-notional"
+                  type="number"
+                  min={1}
+                  max={1000}
+                  step={1}
+                  value={orderNotional}
+                  onChange={(e) => setOrderNotional(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <button type="button" className="run-button inline" onClick={handlePlaceOrder} disabled={placing}>
+              {placing ? <span className="spinner" /> : '▶'} Place Order
+            </button>
+          </div>
+          {orderError && <div className="error-banner" style={{ marginTop: 12 }}>{orderError}</div>}
+          {orderSuccess && <p className="text-good" style={{ marginTop: 12 }}>{orderSuccess}</p>}
+        </div>
+      )}
+
+      {configured === true && (
         <div className="table-card card">
           <h3>Positions</h3>
           {positions.length === 0 ? (
@@ -127,6 +211,7 @@ export default function PortfolioView({ assets: _assets, strategies: _strategies
                     <th>Market Value</th>
                     <th>Unrealized P&amp;L</th>
                     <th>Unrealized %</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,6 +227,16 @@ export default function PortfolioView({ assets: _assets, strategies: _strategies
                       </td>
                       <td className={p.unrealized_plpc >= 0 ? 'text-good' : 'text-bad'}>
                         {fmtPct(p.unrealized_plpc)}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="chip"
+                          onClick={() => handleClosePosition(p.ticker)}
+                          disabled={closingTicker === p.ticker}
+                        >
+                          {closingTicker === p.ticker ? <span className="spinner" /> : 'Close'}
+                        </button>
                       </td>
                     </tr>
                   ))}
